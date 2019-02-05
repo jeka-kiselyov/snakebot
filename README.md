@@ -74,7 +74,7 @@ Run tests each time .js file updated (you hit Ctrl+S in IDE):
 
 ### License
 
-MIT
+GNU General Public License v3.0
 
 ### Author
 
