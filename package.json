@@ -1,6 +1,6 @@
 {
   "name": "snakebot",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Snake Bot for epam-bot-challenge.com.ua",
   "main": "app.js",
   "scripts": {
@@ -9,7 +9,11 @@
     "play": "node app.js play"
   },
   "author": "Jeka Kiselyov <jeka911@gmail.com> (https://github.com/jeka-kiselyov)",
-  "license": "MIT",
+  "license": "GPLv3",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jeka-kiselyov/snakebot.git"
+  },
   "dependencies": {
     "axios": "^0.18.0",
     "chai": "^4.2.0",
@@ -21,5 +25,14 @@
     "lovacli": "^0.1.10",
     "prompt-async": "^0.9.9",
     "ws": "^6.1.3"
-  }
+  },
+  "keywords": [
+    "ai",
+    "game",
+    "bot",
+    "snake",
+    "contest",
+    "play",
+    "cli"
+  ]
 }
