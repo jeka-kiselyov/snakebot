@@ -1,0 +1,25 @@
+{
+  "name": "snakebot",
+  "version": "1.0.0",
+  "description": "Snake Bot for epam-bot-challenge.com.ua",
+  "main": "app.js",
+  "scripts": {
+    "test": "node_modules/.bin/mocha includes/test",
+    "config": "node app.js config",
+    "play": "node app.js play"
+  },
+  "author": "Jeka Kiselyov <jeka911@gmail.com> (https://github.com/jeka-kiselyov)",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^0.18.0",
+    "chai": "^4.2.0",
+    "cli-table3": "^0.5.1",
+    "grunt": "^1.0.3",
+    "grunt-contrib-watch": "^1.1.0",
+    "grunt-env": "^0.4.4",
+    "grunt-mocha-cli": "^4.0.0",
+    "lovacli": "^0.1.10",
+    "prompt-async": "^0.9.9",
+    "ws": "^6.1.3"
+  }
+}
