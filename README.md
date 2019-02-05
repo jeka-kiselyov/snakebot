@@ -4,8 +4,8 @@ Snake Bot for [https://epam-bot-challenge.com.ua/](https://epam-bot-challenge.co
 
  - CLI, no browser required
  - Recreates sessions on new days
- - node.js, love
  - mocha+chai unit tests
+ - 🐍❤️ 
 
 ### Installation
 
