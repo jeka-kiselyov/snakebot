@@ -7,6 +7,8 @@ Snake Bot for [https://epam-bot-challenge.com.ua/](https://epam-bot-challenge.co
  - mocha+chai unit tests
  - 🐍❤️ 
 
+![snakebot](https://raw.githubusercontent.com/jeka-kiselyov/snakebot/githubusercontent/screen/screen.gif "Snakebot in action")
+
 ### Installation
 
 ```bash
