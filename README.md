@@ -53,7 +53,7 @@ or using specific set of player logic
     node app.js play configname norocks2
 ```
 
-you can check some player's settings [here](https://epam-bot-challenge.com.ua/) 
+you can check some player's settings [here](https://github.com/jeka-kiselyov/snakebot/tree/master/app/playersettings).
 
 
 ##### Run the bot in forever mode
