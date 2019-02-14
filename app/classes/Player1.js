@@ -3,8 +3,11 @@ const {Program,Command,LovaClass} = require('lovacli');
 const GameBoardConstants = require('./GameBoardConstants.js');
 const UIHelper = require('./UIHelper.js');
 
+const EnemyList = require('./EnemyList.js');
+const Enemy = require('./Enemy.js');
+
 class Player1 extends LovaClass { /// EventEmmiter
-	constructor() {
+	constructor(params = {}) {
 		super();
 
 		this._board = null;
@@ -12,8 +15,14 @@ class Player1 extends LovaClass { /// EventEmmiter
 			FORWARD: 0,
 			LEFTWARD: 0,
 			RIGHTWARD: 0,
+			BACKWARD: 0,
 			ACTION: 0
 		};
+
+		this._settings = params.settings || 'default';
+		if (typeof this._settings === 'string' || this._settings instanceof String) {
+			this._settings = require('../playersettings/'+this._settings+'.js');			
+		}
 
 		this._command = null;
 	}
@@ -40,6 +49,7 @@ class Player1 extends LovaClass { /// EventEmmiter
 			FORWARD: 1,
 			LEFTWARD: 1,
 			RIGHTWARD: 1,
+			BACKWARD: 0,
 			ACTION: 0
 		};		
 	}
@@ -62,6 +72,7 @@ class Player1 extends LovaClass { /// EventEmmiter
 			FORWARD: 1,
 			LEFTWARD: 1,
 			RIGHTWARD: 1,
+			BACKWARD: 0,
 			ACTION: 0
 		};
 
@@ -69,15 +80,6 @@ class Player1 extends LovaClass { /// EventEmmiter
 
 		/// 1st. Calculate features
 		let afSurround = this._board.allFieldSurround;
-
-		let playerSnakeLengthOnTheNextMove = afSurround.playerSnakeLength;
-		//// determine if we eat rock on the prev move
-		if (previousBoards && previousBoards.length) {
-			if (previousBoards[previousBoards.length - 1].getElementByXY(this._board.playerHeadPosition) == GameBoardConstants.ELEMENT.STONE) {
-				console.log('EAT ROCK ON PREV MOVE');
-				playerSnakeLengthOnTheNextMove = playerSnakeLengthOnTheNextMove - 3;
-			}
-		}
 
 		let isFuryOnTheNextMove = false;
 		let expectedFuryMoves = 0;
@@ -105,6 +107,17 @@ class Player1 extends LovaClass { /// EventEmmiter
 			}
 		}
 
+		let playerSnakeLengthOnTheNextMove = afSurround.playerSnakeLength;
+		//// determine if we eat rock on the prev move
+		if (previousBoards && previousBoards.length && !isFuryOnTheNextMove) {
+			if (previousBoards[previousBoards.length - 1].getElementByXY(this._board.playerHeadPosition) == GameBoardConstants.ELEMENT.STONE) {
+				console.log('EAT ROCK ON PREV MOVE');
+				playerSnakeLengthOnTheNextMove = playerSnakeLengthOnTheNextMove - 3;
+			}
+		}
+
+		let enemyList = afSurround.enemyList;
+		let activeEnemies = enemyList.filterEnemies([Enemy.STATE.FURY, Enemy.STATE.DEFAULT, Enemy.STATE.LONG, Enemy.STATE.FLY]);
 
 
 		/// 1.1 Expected state on the next move
@@ -116,13 +129,67 @@ class Player1 extends LovaClass { /// EventEmmiter
 				expectedNextMoveState = 'FURY';				
 			}
 		} else if (playerSnakeLengthOnTheNextMove >= 5) {
-			expectedNextMoveState = 'LONG';			
+			expectedNextMoveState = 'LONG';
+
+			let isLongest = true;
+			let longestEnemyLength = 0;
+			for (let enemy of activeEnemies) {
+				if (enemy.length > playerSnakeLengthOnTheNextMove) {
+					isLongest = false;
+				}
+				if (enemy.length > longestEnemyLength) {
+					longestEnemyLength = enemy.length;
+				}
+			}
+
+			// console.log('LE: '+longestEnemyLength);
+			// console.log('PL: '+playerSnakeLengthOnTheNextMove);
+
+			if (isLongest) {
+				expectedNextMoveState = 'LONGEST';
+				if (playerSnakeLengthOnTheNextMove > longestEnemyLength + 3) {
+					expectedNextMoveState = 'LONGESTPLUS3';
+				}
+			} else {
+				console.log('NOT LONGEST');
+			}
 		}
 
 		console.log('NEXT MOVE STATE: '+expectedNextMoveState);
 
 		/// !!!!
 		afSurround.targetList.setState(expectedNextMoveState);
+		afSurround.targetList.updateStateWithSettings(this._settings);
+
+
+		//// 1.1.1 If we're fury and there's enemy head next to us - kill him
+		if (expectedNextMoveState == 'FURY') {
+			afSurround.targetList.setExtraState('killNearest');
+		}
+
+		///// 1.1.2 If we are longer then enemy with head next to us - kill him
+		/// playerSnakeLengthOnTheNextMove
+		for (let enemy of activeEnemies) {
+			if (enemy.isOneCellAhead() && (enemy.length + 1) < playerSnakeLengthOnTheNextMove) {
+				afSurround.targetList.setExtraState('killNearest');				
+			}
+		}
+
+
+		///// 1.1.3 If enemy is longer than us - mark his possible next moves as no-go
+		for (let enemy of activeEnemies) {
+			if ((enemy.length > playerSnakeLengthOnTheNextMove || enemy.isFury()) && !isFuryOnTheNextMove) {
+				enemy.mark2CellsAsDangerous(this._settings.specials.markNCellAsDangerousAroundLongerEnemy);
+				// console.log('LLLLLLLLLLLLL');
+				// console.log('LLLLLLLLLLLLL');
+				// console.log('LLLLLLLLLLLLL');
+				// console.log('LLLLLLLLLLLLL');
+				// console.log('LLLLLLLLLLLLL');
+				// for (let i = 0; i <enemy.nextMovePositions.length; i++) {
+				// 	afSurround.matrix[enemy.nextMovePositions[i].y][enemy.nextMovePositions[i].x] = GameBoardConstants.ELEMENT.ENEMY_LONGER_HEAD_POSSIBLE_MOVES;
+				// }	
+			}
+		}
 
 
 		/// 1.2 Surround area vectors
@@ -142,13 +209,100 @@ class Player1 extends LovaClass { /// EventEmmiter
 			right: {x: afSurround.headPosition.x + 1, y: afSurround.headPosition.y}
 		};
 
+		//// 1.3.1 pessimize targets that are closest to enemies
+
+
+		console.log('Enemies: '+activeEnemies.length);
+
+		for (let enemy of activeEnemies) {
+			let closestToEnemyTargetPath = enemy.getClosestTargetPath();
+			if (closestToEnemyTargetPath) {
+				let distanceFromEnemyToEnemyClosestTarget = closestToEnemyTargetPath.distance;
+				console.log('Distance from enemy to his closest target: '+distanceFromEnemyToEnemyClosestTarget);
+				let distanceFromPlayerToEnemyClosestTarget = afSurround.targetList.distanceBetweenPoints(afSurround.headPosition, closestToEnemyTargetPath.target);
+				console.log('Distance from player to enemy closest target: '+distanceFromPlayerToEnemyClosestTarget);
+
+				if (distanceFromEnemyToEnemyClosestTarget < distanceFromPlayerToEnemyClosestTarget) {
+					//// pessimize target
+					let ourTarget = afSurround.targetList.targetByCoordinates(closestToEnemyTargetPath.target);
+					if (ourTarget) {
+						ourTarget.pessimize(50);
+					}
+				}
+
+				if (distanceFromEnemyToEnemyClosestTarget == distanceFromPlayerToEnemyClosestTarget) {
+					if (enemy.length > playerSnakeLengthOnTheNextMove) {
+						//// try to avoid head hit with longer enemy
+
+						console.log('Enemy length: '+enemy.length);
+						console.log('Player length: '+playerSnakeLengthOnTheNextMove);
+
+						//// pessimize target
+						let ourTarget = afSurround.targetList.targetByCoordinates(closestToEnemyTargetPath.target);
+						if (ourTarget) {
+							ourTarget.pessimize(50);
+						}
+					}
+					if (playerSnakeLengthOnTheNextMove > (enemy.length + 1)) {
+						if (!enemy.isFury()) {
+							/// we can kill him hitting in the head on that target
+
+							console.log('Enemy length: '+enemy.length);
+							console.log('Player length: '+playerSnakeLengthOnTheNextMove);
+							console.log('Going to kill!');
+
+							//// pessimize target
+							let ourTarget = afSurround.targetList.targetByCoordinates(closestToEnemyTargetPath.target);
+							if (ourTarget) {
+								ourTarget.prioritize(100);
+							}							
+						}
+					}
+				}
+
+				if (distanceFromEnemyToEnemyClosestTarget - 1 == distanceFromPlayerToEnemyClosestTarget) {
+					if (enemy.length > playerSnakeLengthOnTheNextMove) {
+						/// try to avoid neck hit with longer enemy
+						console.log('Enemy length: '+enemy.length);
+						console.log('Player length: '+playerSnakeLengthOnTheNextMove);
+
+						//// pessimize target
+						let ourTarget = afSurround.targetList.targetByCoordinates(closestToEnemyTargetPath.target);
+						if (ourTarget) {
+							ourTarget.pessimize(50);
+						}
+					}					
+				}
+
+				if (distanceFromEnemyToEnemyClosestTarget == distanceFromPlayerToEnemyClosestTarget - 1) {
+						if (!enemy.isFury()) {
+							if (playerSnakeLengthOnTheNextMove > (enemy.length + 1)) {
+								/// we can kill him hitting in the neck on that target
+
+								console.log('Enemy length: '+enemy.length);
+								console.log('Player length: '+playerSnakeLengthOnTheNextMove);
+								console.log('Going to kill!');
+
+								//// pessimize target
+								let ourTarget = afSurround.targetList.targetByCoordinates(closestToEnemyTargetPath.target);
+								if (ourTarget) {
+									ourTarget.prioritize(100);
+								}	
+							}	
+						}			
+				}
+
+			}
+		}
+
 
 		let targetSortFunction = function(params) {
 			let target = params.target;
 			let distance = params.distance;
 			let rating = target.rating;
+			let pessimizationK = target.pessimizationK;
 
-			return distance-rating;
+			return distance-rating+pessimizationK;
 		};
 
 		let nextMoveClosestTargets = {
@@ -198,8 +352,8 @@ class Player1 extends LovaClass { /// EventEmmiter
 			}
 		}
 
-
-		afSurround.targetList.log(afSurround.headPosition, targetSortFunction);
+		console.log(afSurround.targetList.targetElements);
+		afSurround.targetList.log(afSurround.headPosition, targetSortFunction, 3);
 
 		//// 1.4 find out if we can drop the stone!
 
@@ -209,7 +363,7 @@ class Player1 extends LovaClass { /// EventEmmiter
 
 		if (isFuryOnTheNextMove) {
 			console.log('Expected fury moves: '+expectedFuryMoves+'  head2tail distance: '+distanceBetweenHeadAndTail);
-			if (playerSnakeLengthOnTheNextMove < expectedFuryMoves - 2) {
+			if (playerSnakeLengthOnTheNextMove < expectedFuryMoves) {
 				features.NEED_TO_ACT = 1;
 			}
 		} else {
@@ -219,8 +373,12 @@ class Player1 extends LovaClass { /// EventEmmiter
 			/// ---- drop the stone
 			let furyPills = afSurround.targetList.filterTargetsByElement(GameBoardConstants.ELEMENT.FURY_PILL);
 
-			if (!furyPills.length && fromHeadTargets.length && distanceBetweenHeadAndTail < fromHeadTargets[0].getDistanceTo(afSurround.headPosition) - 2) {
-				if (playerSnakeLengthOnTheNextMove >= 5) {
+			let dropTheRockIfTheresNoTargetNearThan = this._settings.specials.dropTheRockIfTheresNoTargetNearThan || -Infinity;
+			let dropTheRockIfLengthMoreThan =  this._settings.specials.dropTheRockIfLengthMoreThan || Infinity;
+
+			if (!furyPills.length && fromHeadTargets.length && 
+					distanceBetweenHeadAndTail < fromHeadTargets[0].getDistanceTo(afSurround.headPosition) - dropTheRockIfTheresNoTargetNearThan) {
+				if (playerSnakeLengthOnTheNextMove >= dropTheRockIfLengthMoreThan) {
 					features.NEED_TO_ACT = 1;
 				}
 				console.log('TAIL IS CLOSER');
@@ -229,6 +387,7 @@ class Player1 extends LovaClass { /// EventEmmiter
 			}			
 		}
 
+		console.log('Player snake length on the next move: '+playerSnakeLengthOnTheNextMove);
 
 		applyKToMaxFeaturesFromSet(['VECTOR_LEFTWARD_RATING','VECTOR_FORWARD_RATING','VECTOR_RIGHTWARD_RATING'], 2);
 		applyKToMaxFeaturesFromSet(['CLOSEST_LEFTWARD_RATING','CLOSEST_FORWARD_RATING','CLOSEST_RIGHTWARD_RATING'], 2.1);

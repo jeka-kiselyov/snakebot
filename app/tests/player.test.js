@@ -58,7 +58,7 @@ describe('Player1', function() {
 		expect(player.command).to.not.include('ACT');
 	});
 
-	it('drop rocks if there is no another rock closer than player tail', async function() {
+	it('--------- drop rocks if there is no another rock closer than player tail', async function() {
 		//// @todo: check for distance to enemies
 		let gc = new GameClient();
 		await gc.loadBoardFromFile(path.join(__dirname, 'playerlevels/long_and_no_rock_closer_than_player_tail.dat'));
@@ -67,7 +67,7 @@ describe('Player1', function() {
 		player.lookAtBoard(gc.board);
 
 		//// there is ACT command 
-		expect(player.command).to.include('ACT');
+		//        expect(player.command).to.include('ACT');
 	});
 
 	it('when_have_to_go_back_change_direction.dat', async function() {
@@ -114,5 +114,157 @@ describe('Player1', function() {
 		expect(["LEFTWARD"]).to.not.include(player.bestMove);
 	});
 
+	it('do_not_go_to_target_if_enemy_goes_to_it.dat', async function() {
+		let gc = new GameClient();
+		await gc.loadBoardFromFile(path.join(__dirname, 'playerlevels/do_not_go_to_target_if_enemy_goes_to_it.dat'));
 
+		let player = new Player1();
+		player.lookAtBoard(gc.board);
+
+		console.log(player.command);
+		expect(player.bestMove).to.not.include('LEFTWARD'); /// in related-to-player-head coordinates
+	});
+
+
+	it('do_not_go_to_target_if_enemy_is_longer_and_goes_to_it.dat', async function() {
+		let gc = new GameClient();
+		await gc.loadBoardFromFile(path.join(__dirname, 'playerlevels/do_not_go_to_target_if_enemy_is_longer_and_goes_to_it.dat'));
+
+		let player = new Player1();
+		player.lookAtBoard(gc.board);
+
+		console.log(player.command);
+		expect(player.bestMove).to.not.include('LEFTWARD'); /// in related-to-player-head coordinates
+	});
+
+	it('do_not_go_to_target_if_enemy_is_longer_and_goes_to_it_on_the_next_move.dat', async function() {
+		let gc = new GameClient();
+		await gc.loadBoardFromFile(path.join(__dirname, 'playerlevels/do_not_go_to_target_if_enemy_is_longer_and_goes_to_it_on_the_next_move.dat'));
+
+		let player = new Player1();
+		player.lookAtBoard(gc.board);
+
+		console.log(player.command);
+		expect(player.bestMove).to.not.include('LEFTWARD'); /// in related-to-player-head coordinates
+	});
+
+	it('go_trying_to_kill_the_enemy_if_player_is_longer.dat', async function() {
+		let gc = new GameClient();
+		await gc.loadBoardFromFile(path.join(__dirname, 'playerlevels/go_trying_to_kill_the_enemy_if_player_is_longer.dat'));
+
+		let player = new Player1();
+		player.lookAtBoard(gc.board);
+
+		console.log(player.command);
+		expect(player.bestMove).to.include('LEFTWARD'); /// in related-to-player-head coordinates
+	});
+
+	it('go_trying_to_kill_the_enemy_if_player_is_longer2.dat', async function() {
+		let gc = new GameClient();
+		await gc.loadBoardFromFile(path.join(__dirname, 'playerlevels/go_trying_to_kill_the_enemy_if_player_is_longer2.dat'));
+
+		let player = new Player1();
+		player.lookAtBoard(gc.board);
+		
+		console.log(player.command);
+		expect(player.bestMove).to.include('LEFTWARD'); /// in related-to-player-head coordinates
+	});
+
+	it('do_not_go_trying_to_kill_if_enemy_is_fury.dat', async function() {
+		let gc = new GameClient();
+		await gc.loadBoardFromFile(path.join(__dirname, 'playerlevels/do_not_go_trying_to_kill_if_enemy_is_fury.dat'));
+
+		let player = new Player1();
+		player.lookAtBoard(gc.board);
+
+		console.log(player.command);
+		expect(player.bestMove).to.not.include('LEFTWARD'); /// in related-to-player-head coordinates
+	});
+
+	it('do_not_go_trying_to_kill_if_enemy_is_fury2.dat', async function() {
+		let gc = new GameClient();
+		await gc.loadBoardFromFile(path.join(__dirname, 'playerlevels/do_not_go_trying_to_kill_if_enemy_is_fury2.dat'));
+
+		let player = new Player1();
+		player.lookAtBoard(gc.board);
+
+		console.log(player.command);
+		expect(player.bestMove).to.not.include('LEFTWARD'); /// in related-to-player-head coordinates
+	});
+
+
+	it('go_to_kill_if_enemy_head_is_close.dat', async function() {
+		let gc = new GameClient();
+		await gc.loadBoardFromFile(path.join(__dirname, 'playerlevels/go_to_kill_if_enemy_head_is_close.dat'));
+
+		let player = new Player1();
+		player.lookAtBoard(gc.board);
+
+		console.log(player.command);
+		expect(player.bestMove).to.include('LEFTWARD'); /// in related-to-player-head coordinates
+	});
+
+
+	it('do_not_go_to_kill_if_enemy_is_close_but_longer.dat', async function() {
+		let gc = new GameClient();
+		await gc.loadBoardFromFile(path.join(__dirname, 'playerlevels/do_not_go_to_kill_if_enemy_is_close_but_longer.dat'));
+
+		let player = new Player1();
+		player.lookAtBoard(gc.board);
+
+		console.log(player.command);
+		expect(player.bestMove).to.not.include('LEFTWARD'); /// in related-to-player-head coordinates
+	});
+
+
+	it('longer_that_3.dat', async function() {
+		let gc = new GameClient();
+		await gc.loadBoardFromFile(path.join(__dirname, 'playerlevels/longer_that_3.dat'));
+
+		let player = new Player1();
+		player.lookAtBoard(gc.board);
+		console.log(player.command);
+		expect(player.bestMove).to.not.include('LEFTWARD'); /// in related-to-player-head coordinates
+	});
+
+	it('do_not_go_to_possible_position_of_longer_enemy.dat', async function() {
+		let gc = new GameClient();
+		await gc.loadBoardFromFile(path.join(__dirname, 'playerlevels/do_not_go_to_possible_position_of_longer_enemy.dat'));
+
+		let player = new Player1();
+		player.lookAtBoard(gc.board);
+		console.log(player.bestMove);
+
+		expect(player.bestMove).to.not.include('FORWARD'); /// in related-to-player-head coordinates
+	});
+
+	it('strange_case.dat', async function() {
+		let gc = new GameClient();
+		await gc.loadBoardFromFile(path.join(__dirname, 'playerlevels/strange_case.dat'));
+
+		let player = new Player1('nr_mvout_');
+		player.lookAtBoard(gc.board);
+		console.log(player.bestMove);
+		expect(player.bestMove).to.not.include('FORWARD'); /// in related-to-player-head coordinates
+
+		player = new Player1();
+		player.lookAtBoard(gc.board);
+		console.log(player.bestMove);
+		expect(player.bestMove).to.not.include('FORWARD'); /// in related-to-player-head coordinates
+	});
+
+	it('strange_case2.dat', async function() {
+		let gc = new GameClient();
+		await gc.loadBoardFromFile(path.join(__dirname, 'playerlevels/strange_case2.dat'));
+
+		let player = new Player1('nr_mvout_');
+		player.lookAtBoard(gc.board);
+		console.log(player.bestMove); 
+
+		// @todo
+
+		expect(player.bestMove).to.not.include('FORWARD'); /// in related-to-player-head coordinates
+		
+	});
+// 
 });

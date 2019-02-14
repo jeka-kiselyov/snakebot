@@ -24,6 +24,7 @@ class GameBoard extends LovaClass { /// EventEmmiter
 
 		// @todo: need this as option?
 		this.closeAllTraps();
+		this.convertSpecialCells();
 
 		this._allFieldSurround = this.getAllFieldSurround(true);
 		// this._allFieldSurround.log();
@@ -108,6 +109,17 @@ class GameBoard extends LovaClass { /// EventEmmiter
 			} else if (playerSnakeDirection == 'left') {
 				this._command = 'UP';
 			}
+		}
+		if (move == 'backward' || move == 'BACKWARD') {
+			if (playerSnakeDirection == 'up') {
+				this._command = 'RIGHT,DOWN';
+			} else if (playerSnakeDirection == 'right') {
+				this._command = 'DOWN,LEFT';
+			} else if (playerSnakeDirection == 'down') {
+				this._command = 'LEFT,UP';
+			} else if (playerSnakeDirection == 'left') {
+				this._command = 'UP,RIGHT';
+			}			
 		}
 
 		return this._command;
@@ -269,6 +281,25 @@ class GameBoard extends LovaClass { /// EventEmmiter
 		}
 
 		return closedTrapsCount;
+	}
+
+	convertSpecialCells() {
+		//// special cell 1, enemy normal head that distance to player == 1
+		let enemyHeadElements = [];
+		for (let k in GameBoardConstants.TAGS.ENEMYNORMALHEAD) {
+			enemyHeadElements.push(GameBoardConstants.ELEMENT[GameBoardConstants.TAGS.ENEMYNORMALHEAD[k]]);
+		}
+		for (let x = 0; x < this.size; x++) {
+			for (let y = 0; y < this.size; y++) {
+				let element = this.getElementByXY({x: x, y: y});
+				let distanceToPlayerHead = Math.abs(this._playerHeadPosition.x - x) + Math.abs(this._playerHeadPosition.y - y);
+				if (distanceToPlayerHead <= 1 && enemyHeadElements.indexOf(element) != -1) {
+					this.setElementToXY({x: x, y: y}, GameBoardConstants.ELEMENT.ENEMY_HEAD_ONE_POINT_FROM_PLAYER);					
+				}
+			}
+		}
+
+		// this.log(); dsad;
 	}
 
 	closeAllTraps() {

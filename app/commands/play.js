@@ -8,8 +8,9 @@ const path = require('path');
 
 class Handler extends Command {
     async setup(progCommand) {
-        progCommand.description('Play the game');
+        progCommand.description('Test server connection');
         progCommand.argument('[configName]', 'Config name to use', null, 'default');
+        progCommand.argument('[settingsName]', 'Settings to use for logic', null, 'default');
     }
 
     async handle(args, options, logger) {
@@ -17,20 +18,31 @@ class Handler extends Command {
         try {
             config = require(path.join(__dirname, '../../config/'+args.configName+'.json'));
         } catch(e) {
-            this.logger.error("Invalid configName: "+args.configName+" Don't you forget to run config command first?");
+            this.logger.error("Invalid configName: "+args.configName);
             this.program.exit();
         }
         this.logger.debug("Config loaded");
 
+        let settings = {};
+        try {
+            settings = require(path.join(__dirname, '../playersettings/'+args.settingsName+'.js'));
+        } catch(e) {
+            this.logger.error("Invalid settingsName: "+args.settingsName);
+            this.program.exit();
+        }
+        this.logger.debug("Settings loaded");
+
+        config.prefix = args.settingsName;
+
         const gc = new GameClient(config);
-        let loggedIn = await gc.login();
+        let loggedIn = await gc.tryToLogin();
 
         if (!loggedIn) {
             this.logger.error("Can not sign in to the server");  
             this.program.exit();          
         }
 
-        const player = new Player1();
+        const player = new Player1({settings: settings});
 
         await gc.initializeSocket();
 

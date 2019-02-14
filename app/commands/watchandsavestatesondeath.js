@@ -23,7 +23,8 @@ class Handler extends Command {
         this.logger.debug("Config loaded");
 
         const gc = new GameClient(config);
-        let loggedIn = await gc.login();
+
+        let loggedIn = await gc.tryToLogin();
 
         if (!loggedIn) {
             this.logger.error("Can not sign in to the server");  

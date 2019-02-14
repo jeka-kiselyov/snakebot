@@ -29,6 +29,19 @@ describe('GameTargetList', function() {
 
 		//// few distance calculations checks
 		let playerHeadPosition = afSurround.headPosition;
+		let playerTailPosition = afSurround.tailPosition;
+
+		/// empty - path using cells that is not in blockingElement list
+		expect(gameTargetList.distanceBetweenPoints(playerHeadPosition, playerTailPosition, false, 'empty')).to.equal(5);
+		/// shortest - path using cells that is not in blockingElement list + weighted from blockingElement list
+		/// may be shorted in real distance
+		/// 20(player body) + 20(player body) + 1(tail)
+		expect(gameTargetList.distanceBetweenPoints(playerHeadPosition, playerTailPosition, false, 'shortest')).to.equal(21);
+
+		//// best distance is one with lowest value between shortest and empty
+		expect(gameTargetList.bestDistanceBetweenPoints(playerHeadPosition, playerTailPosition, false)).to.equal(5);
+
+
 		let oneCellAhead = {x: afSurround.headPosition.x, y: afSurround.headPosition.y-1}; /// it's an empty cell
 		expect(gameTargetList.distanceBetweenPoints(playerHeadPosition, oneCellAhead)).to.equal(1);
 		let twoCellsAhead = {x: afSurround.headPosition.x, y: afSurround.headPosition.y-2}; /// it's an empty cell, just before the wall
@@ -51,7 +64,7 @@ describe('GameTargetList', function() {
 
 		let appleAfterStoneAfterAppleRight = {x: afSurround.headPosition.x+6, y: afSurround.headPosition.y}; /// there is apple, but path should go above store
 
-		console.log(afSurround._matrix[afSurround.headPosition.y][afSurround.headPosition.x+6]);
+		// console.log(afSurround._matrix[afSurround.headPosition.y][afSurround.headPosition.x+6]);
 		expect(gameTargetList.distanceBetweenPoints(playerHeadPosition, appleAfterStoneAfterAppleRight)).to.equal(8);
 		// 8 = 7 path items (+) and final apple(○)
 		// ☼☼          ●     ║          ☼
@@ -106,21 +119,12 @@ describe('GameTargetList', function() {
 
 		gameTargetList.setState('FIRSTMOVEFURY');
 		distancesFromPlayerHead = gameTargetList.calculateDistances(afSurround.headPosition);
-
+		// gameTargetList.log(afSurround.headPosition, null, 9);		
 		expect(distancesFromPlayerHead[0].x).to.equal(appleAheadRight.x);
 		expect(distancesFromPlayerHead[0].y).to.equal(appleAheadRight.y);
-
-		//// now: it's player's tail   !!!!!!!!!!!!                                                       was: but it IS that stone in fury mode!
-		expect(distancesFromPlayerHead[1].x).to.equal(afSurround.tailPosition.x);
-		expect(distancesFromPlayerHead[1].y).to.equal(afSurround.tailPosition.y);
-
-		expect(distancesFromPlayerHead[2].x).to.equal(appleRight.x);
-		expect(distancesFromPlayerHead[2].y).to.equal(appleRight.y);
-
+		
 		//// get access to distances from GameTargets
 		expect(distancesFromPlayerHead[0].getDistanceTo(afSurround.headPosition)).to.equal(3); /// same values we got with distanceBetweenPoints()
-		expect(distancesFromPlayerHead[1].getDistanceTo(afSurround.headPosition)).to.equal(3); //// DIFFERENT: distance to TAIL
-		expect(distancesFromPlayerHead[2].getDistanceTo(afSurround.headPosition)).to.equal(4);
 		
 		gameTargetList.setState('LONG');
 		distancesFromPlayerHead = gameTargetList.calculateDistances(afSurround.headPosition);
@@ -142,11 +146,19 @@ describe('GameTargetList', function() {
 			return -rating;
 		};
 		let distancesFromPlayerHeadWithRatingUsing = gameTargetList.calculateDistances(afSurround.headPosition, sortTargetFunction);
+
+
+		// for (let i = 0; i < distancesFromPlayerHeadWithRatingUsing.length; i++) {
+		// 	console.log(distancesFromPlayerHeadWithRatingUsing[i].element);
+		// }
+
+		// gameTargetList.log(afSurround.headPosition, sortTargetFunction);
+
 		/// there re 2 fury pills, they should have maximum priority
 		expect(distancesFromPlayerHeadWithRatingUsing[0].element).to.equal(GameBoardConstants.ELEMENT.FURY_PILL);
 		expect(distancesFromPlayerHeadWithRatingUsing[1].element).to.equal(GameBoardConstants.ELEMENT.FURY_PILL);
-		//// next few are stones
-		expect(distancesFromPlayerHeadWithRatingUsing[2].element).to.equal(GameBoardConstants.ELEMENT.STONE);
+		//// next few are golds
+		expect(distancesFromPlayerHeadWithRatingUsing[2].element).to.equal(GameBoardConstants.ELEMENT.GOLD);
 		//// and lowest priorities are for apples
 		expect(distancesFromPlayerHeadWithRatingUsing[distancesFromPlayerHeadWithRatingUsing.length - 1].element).to.equal(GameBoardConstants.ELEMENT.APPLE);
 		expect(distancesFromPlayerHeadWithRatingUsing[distancesFromPlayerHeadWithRatingUsing.length - 2].element).to.equal(GameBoardConstants.ELEMENT.APPLE);
@@ -167,9 +179,6 @@ describe('GameTargetList', function() {
 
 		// console.log(11);
 
-		// for (let i = 0; i < distancesFromPlayerHeadWithRatingDistanceUsing.length; i++) {
-		// 	console.log(distancesFromPlayerHeadWithRatingDistanceUsing[i].element);
-		// }
 
 		// console.log(distancesFromPlayerHead);
 		// dasd;

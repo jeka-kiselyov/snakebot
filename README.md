@@ -31,7 +31,8 @@ Answer 4 simple questions:
 info: Going to update credentials...                     
 prompt: Config name:  (default)                          
 prompt: Game server domain name:  (epam-bot-challenge.com.ua)   
-prompt: username:  example@gmail.com                            
+prompt: username:  example@gmail.com                           
+prompt: readableName:  Победитель Григорьевич                            
 prompt: password: 
 ```
 
@@ -47,6 +48,13 @@ or specific one
 ```bash
     node app.js play configname
 ```
+or using specific set of player logic
+```bash
+    node app.js play configname norocks2
+```
+
+you can check some player's settings [here](https://epam-bot-challenge.com.ua/) 
+
 
 ##### Run the bot in forever mode
 

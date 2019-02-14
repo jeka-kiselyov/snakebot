@@ -33,7 +33,12 @@ class Handler extends Command {
                     username: {
                         pattern: /^\S+@\S+\.\S+$/,
                         message: 'Usually it is email address',
-                        required: true
+                        description: 'Player email',
+                        required: false
+                    },
+                    readableName: {
+                        description: 'Player name',
+                        required: false
                     },
                     password: {
                         hidden: true,
@@ -47,13 +52,13 @@ class Handler extends Command {
         input.password = crypto.createHash('md5').update(input.password).digest("hex");
         console.log(input);
         let gc = new GameClient(input);
-        let success = await gc.login();
+        let success = await gc.tryToLogin();
 
         if (success) {
             this.logger.info("Works cool");
             let data = JSON.stringify(input, null, 2);
             fs.writeFileSync(path.join(__dirname, '../../config/'+input.configName+'.json'), data);
-            this.logger.info("Settings saved in "+input.configName+" Run 'node app.js play "+input.configName+"' for some action");
+            this.logger.info("Settings saved in "+input.configName+" Run node app.js player "+input.configName+" for some action");
 
         } else {
 

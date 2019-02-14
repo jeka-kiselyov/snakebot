@@ -41,7 +41,6 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-env');
 
   grunt.registerTask('default', ['mochacli:local']);
-  grunt.registerTask('test', ['mochacli:local']);
   grunt.registerTask('watchtests', ['env:test', 'watch:javascript']);
 
 };

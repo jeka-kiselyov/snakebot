@@ -13,10 +13,25 @@ class GameTarget {
 		this._gameTargetList = params.gameTargetList || null;
 
 		this._distancesTo = {};
+		this._weightedDistancesTo = {};
+
+		this._pessimizationK = 0;
+	}
+
+	pessimize(byValue) {
+		this._pessimizationK += byValue;
+	}
+
+	prioritize(byValue) {
+		this._pessimizationK -= byValue;
 	}
 
 	get element() {
 		return this._element;
+	}
+
+	get pessimizationK() {
+		return this._pessimizationK || 0;
 	}
 
 	get rating() {
@@ -28,25 +43,38 @@ class GameTarget {
 		return 0;
 	}
 
-	getDistanceTo(point) {
+	getDistanceTo(point, weighted = false) {
 		let x = point.x || 0;
 		let y = point.y || 0;
 		let key = 'd_'+x+'-'+y;
 
-		if (key in this._distancesTo) {
-			return this._distancesTo[key];
+		if (weighted) {
+			if (key in this._weightedDistancesTo) {
+				return this._weightedDistancesTo[key];
+			} else {
+				this._weightedDistancesTo[key] = this._gameTargetList.distanceBetweenPoints({x: x, y: y}, {x: this.x, y: this.y});
+				return this._weightedDistancesTo[key];
+			}		
 		} else {
-			this._distancesTo[key] = this._gameTargetList.distanceBetweenPoints({x: x, y: y}, {x: this.x, y: this.y});
-			return this._distancesTo[key];
+			if (key in this._distancesTo) {
+				return this._distancesTo[key];
+			} else {
+				this._distancesTo[key] = this._gameTargetList.distanceBetweenPoints({x: x, y: y}, {x: this.x, y: this.y});
+				return this._distancesTo[key];
+			}			
 		}
 	}
 
-	setDistanceTo(point, distance) {
+	setDistanceTo(point, distance, weighted = false) {
 		let x = point.x || 0;
 		let y = point.y || 0;
 		let key = 'd_'+x+'-'+y;
 
-		this._distancesTo[key] = distance;
+		if (weighted) {
+			this._weightedDistancesTo[key] = distance;
+		} else {
+			this._distancesTo[key] = distance;			
+		}
 	}
 
 	get x() {

@@ -15,22 +15,145 @@ class GameTargetList {
 
 		this._targets = [];
 		this._toCoordinatesDistances = {};
+
+		this._stateName = 'DEFAULT';
+		this._extraStateName = 'NOTHING';
+
+		this._settings = {};
 	}
 
 	log(fromPosition, sortFunction, showMax = 5) {
 		let array = [];
-		array.push(['from:', 'x:'+fromPosition.x, 'y:'+fromPosition.y, 'd:', 'r:']);
+		array.push(['from:', 'x:'+fromPosition.x, 'y:'+fromPosition.y, 'd:', 'r:', 'pess:']);
 
 		let targets = this.calculateDistances(fromPosition, sortFunction);
 		for (let i = 0; (i < targets.length && i < showMax); i++) {
-			array.push([targets[i].element, targets[i].x, targets[i].y, targets[i].getDistanceTo(fromPosition), targets[i].rating]);
+			array.push([targets[i].element, targets[i].x, targets[i].y, targets[i].getDistanceTo(fromPosition), targets[i].rating, targets[i].pessimizationK]);
 		}
 
 		UIHelper.logTwoDimArray(array);	
 	}
 
+	updateStateWithSettings(settings) {
+		this._settings = settings;
+
+		// console.log(this._stateName);
+		if (this._settings) {
+			if (this._settings.elementsRatings && this._settings.elementsRatings[this._stateName]) {
+				let elementsRatings = this._settings.elementsRatings[this._stateName];
+				let targetElements = {};
+				for (let k in elementsRatings) {
+					if ((GameBoardConstants.ELEMENT[k])) {
+						/// direct element
+						targetElements[GameBoardConstants.ELEMENT[k]] = elementsRatings[k];
+					} else {
+						/// probably it's tag
+						if (GameBoardConstants.TAGS[k]) {
+							for (let eName of GameBoardConstants.TAGS[k]) {
+								targetElements[GameBoardConstants.ELEMENT[eName]] = elementsRatings[k];
+							}
+						}
+					}
+				}
+
+
+				// console.log('Updating targetElements by this._settings'); 
+				// console.log(targetElements);
+				this._targetElements = targetElements;
+				// console.log(targetElements);
+				// fdf;
+			} 
+			if (this._settings.blockingElements && this._settings.blockingElements[this._stateName]) {
+				let blockingElementsRatings = this._settings.blockingElements[this._stateName];
+				let blockingElements = {};
+				for (let k in blockingElementsRatings) {
+					if ((GameBoardConstants.ELEMENT[k])) {
+						/// direct element
+						blockingElements[GameBoardConstants.ELEMENT[k]] = blockingElementsRatings[k];
+					} else {
+						/// probably it's tag
+						if (GameBoardConstants.TAGS[k]) {
+							for (let eName of GameBoardConstants.TAGS[k]) {
+								blockingElements[GameBoardConstants.ELEMENT[eName]] = blockingElementsRatings[k];
+							}
+						}
+					}
+				}
+
+
+				console.log('Updating blockingElements by this._settings'); 
+				// console.log(blockingElements);
+				this._blockingElements = blockingElements;
+				// console.log(targetElements);
+				// fdf;
+			} 
+		}
+
+		this.removeTargetsFromBlocking();
+	}
+
+	removeTargetsFromBlocking() {
+		for (let k of Object.keys(this._targetElements)) {
+			delete this._blockingElements[k];
+		}
+	}
+
+	setExtraState(extraStateName) {
+		this._extraStateName = extraStateName;
+		// console.log(this._settings.extraStates[extraStateName]); dasd;
+		if (this._settings) {
+			if (this._settings.extraStates && this._settings.extraStates[this._extraStateName]) {
+				let extraStateSettings = this._settings.extraStates[this._extraStateName];
+				for (let k of Object.keys(extraStateSettings.targets)) {
+					if ((GameBoardConstants.ELEMENT[k])) {
+						/// direct element
+						this._targetElements[GameBoardConstants.ELEMENT[k]] = extraStateSettings.targets[k];
+					} else {
+						/// probably it's tag
+						if (GameBoardConstants.TAGS[k]) {
+							for (let eName of GameBoardConstants.TAGS[k]) {
+								this._targetElements[GameBoardConstants.ELEMENT[eName]] = extraStateSettings.targets[k];
+							}
+						}
+					}
+				}
+				for (let k of Object.keys(extraStateSettings.blocking)) {
+					if ((GameBoardConstants.ELEMENT[k])) {
+						/// direct element
+						this._blockingElements[GameBoardConstants.ELEMENT[k]] = extraStateSettings.blocking[k];
+					} else {
+						/// probably it's tag
+						if (GameBoardConstants.TAGS[k]) {
+							for (let eName of GameBoardConstants.TAGS[k]) {
+								this._blockingElements[GameBoardConstants.ELEMENT[eName]] = extraStateSettings.blocking[k];
+							}
+						}
+					}
+				}
+			}
+		}
+
+		this.removeTargetsFromBlocking();
+
+	}
+
 	setState(state) {
 		switch (state) {
+			case 'ENEMYFURY':
+				this._targetElements = GameBoardConstants.ELEMENTRATINGS.enemyFuryTargetElements();
+				this._blockingElements = GameBoardConstants.ELEMENTRATINGS.enemyDefaultBlockingElements();
+
+				break;
+			case 'ENEMYLONG':
+				this._targetElements = GameBoardConstants.ELEMENTRATINGS.enemyLongTargetElements();
+				this._blockingElements = GameBoardConstants.ELEMENTRATINGS.enemyDefaultBlockingElements();
+
+				break;
+			case 'ENEMYDEFAULT':
+				this._targetElements = GameBoardConstants.ELEMENTRATINGS.enemyDefaultTargetElements();
+				this._blockingElements = GameBoardConstants.ELEMENTRATINGS.enemyDefaultBlockingElements();
+
+				break;
 			case 'FIRSTMOVEFURY':
 				this._targetElements = GameBoardConstants.ELEMENTRATINGS.firstMoveFuryTargetElements();
 				this._blockingElements = GameBoardConstants.ELEMENTRATINGS.firstMoveFuryBlockingElements();
@@ -42,6 +165,8 @@ class GameTargetList {
 
 				break;
 			case 'LONG':
+			case 'LONGEST':
+			case 'LONGESTPLUS3':
 				this._targetElements = GameBoardConstants.ELEMENTRATINGS.longTargetElements();
 				this._blockingElements = GameBoardConstants.ELEMENTRATINGS.longBlockingElements();
 
@@ -54,8 +179,11 @@ class GameTargetList {
 				break;
 		};
 
+		this._stateName = state;
 		this._targets = [];
 		this._toCoordinatesDistances = {};
+		
+		this.removeTargetsFromBlocking();
 	}
 
 	get matrix() {
@@ -82,6 +210,16 @@ class GameTargetList {
 		return this._targets;
 	}
 
+	targetByCoordinates(coordinates) {
+		for (let target of this.targets) {
+			if (target.x == coordinates.x && target.y == coordinates.y) {
+				return target;
+			}
+		}
+
+		return null;
+	}
+
 	filterTargetsByElement(element) {
 		if (!this._targets.length) {
 			this.fillTargets();
@@ -101,6 +239,7 @@ class GameTargetList {
 	fillTargets() {
 		this._targets = [];
 		this._toCoordinatesDistances = {};
+
 
         for (let x = 0; x < this.gameSurround.width; x++) {
         	for (let y = 0; y < this.gameSurround.height; y++) {
@@ -131,7 +270,12 @@ class GameTargetList {
 
 		let distancesObject = [];
 		for (let i = 0; i < this._targets.length; i++) {
-			let distance = this.distanceBetweenPoints(fromPosition, this._targets[i], includeInitialCellDistance);
+			let distance = this.bestDistanceBetweenPoints(fromPosition, this._targets[i], includeInitialCellDistance);
+
+			if (this._targets[i].element == '╓') {
+				console.log(distance);
+			}
+
 			this._targets[i].setDistanceTo(fromPosition, distance);
 			distancesObject.push(distance);
 
@@ -157,7 +301,13 @@ class GameTargetList {
 		return ret;
 	}
 
-	distanceBetweenPoints(position1, position2, includeInitialCellDistance = false) {
+	bestDistanceBetweenPoints(position1, position2, includeInitialCellDistance = false) {
+		let distanceEmpty = this.distanceBetweenPoints(position1, position2, includeInitialCellDistance, 'empty');
+		let distanceShortest = this.distanceBetweenPoints(position1, position2, includeInitialCellDistance, 'shortest');
+		return Math.min(distanceEmpty, distanceShortest);
+	}
+
+	distanceBetweenPoints(position1, position2, includeInitialCellDistance = false, betterPath = 'empty') {
 		if ((position1.x < 0 || position1.y < 0 || position1.x >= this.width || position1.y >= this.height) ||
 			(position2.x < 0 || position2.y < 0 || position2.x >= this.width || position2.y >= this.height)) {
 			return Infinity;
@@ -197,11 +347,12 @@ class GameTargetList {
 	        		// console.log(queue);
 		        	// console.log('CD: '+this.matrix[y][x]+' - '+thisCellDistance);
 
-		        	if (x == position2.x && y == position2.y && thisCellDistance != Infinity) {
-		        		return last.distance + thisCellDistance;
-		        	}
 
-		        	if (thisCellDistance != Infinity) {
+		        	if ((betterPath == 'shortest' && thisCellDistance != Infinity) || (betterPath == 'empty' && thisCellDistance == 1)) {
+		        		if (x == position2.x && y == position2.y) {
+			        		return last.distance + thisCellDistance;
+			        	}
+
 			        	visited[y][x] = true;
 		        		queue.push({x: x, y: y, distance: last.distance + thisCellDistance});
 		        	}

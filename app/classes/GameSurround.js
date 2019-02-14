@@ -7,6 +7,8 @@ const ArrayHelper = require('./ArrayHelper.js');
 const GameVector = require('./GameVector.js');
 const GameTargetList = require('./GameTargetList.js');
 
+const EnemyList = require('./EnemyList.js');
+
 /**
  * GameSurround is Face-oriented portion of gameboard
  */
@@ -34,6 +36,18 @@ class GameSurround {
 		this._targetList = new GameTargetList({
 			gameSurround: this
 		});
+
+		this._enemyList = new EnemyList({
+			gameSurround: this
+		});
+	}
+
+	get enemyList() {
+		return this._enemyList;
+	}
+
+	get matrix() {
+		return this._matrix;
 	}
 
 	get targetList() {

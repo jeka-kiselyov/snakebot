@@ -1,5 +1,6 @@
 const {Program,Command,LovaClass} = require('lovacli');
 const WebSocket = require('ws');
+const querystring = require('querystring');
 
 const GameBoard = require('./GameBoard.js');
 const ArrayHelper = require('./ArrayHelper.js');
@@ -17,14 +18,40 @@ class GameClient extends LovaClass { /// EventEmmiter
 
 		this._config = {
 			domain: config.domain || null,
-			username: config.username || null,
+			readableName: config.readableName || config.username || '',
+			username: config.username || '',
 			password: config.password || null  //// should be stored as md5 hash
 		};
 
-		this._code = '';
-		this._server = '';
+		let random = ''+(config.prefix ? config.prefix : '')+(''+Math.random()).split('.').join('');
+		if (this._config.username) {
+			this._config.username = this._config.username.split('%random%').join(random);
+		}
+		if (this._config.readableName) {
+			this._config.readableName = this._config.readableName.split('%random%').join(random);			
+		}
+
+		this._code = config.code || '';
+		this._server = config.domain || '';
+		this._id = config.id || '';
+
+		this._mostRecentMessageDate = null;
+
+		this._websocketPath = config.websocketPath || 'wss://%server%/codenjoy-contest/ws?user=%username%&code=%code%';
 
 		this._previousBoards = [];
+	}
+
+	startIdleTimeout() {
+		this._mostRecentMessageDate = new Date();
+		setInterval(()=>{
+				let millisFromMostRecentMessages = ((new Date).getTime() - this._mostRecentMessageDate.getTime());
+				console.log('Idle check: '+millisFromMostRecentMessages);
+				if (millisFromMostRecentMessages > 10000) {
+					console.log('Idle timeout');
+					this._ws.close();
+				}
+			}, 1500);
 	}
 
 	get previousBoards() {
@@ -41,6 +68,97 @@ class GameClient extends LovaClass { /// EventEmmiter
 			if (this._previousBoards.length > 50) {
 				this._previousBoards.shift();
 			}			
+		}
+	}
+
+	async tryToLogin() {
+		let success = false;
+		success = await this.loginRedirect(true);
+		if (!success) {
+			success = await this.loginRedirect(false);
+		}
+		if (!success) {
+			success = await this.login();
+		}
+
+		return success;
+	}
+
+	// async loginDevServer(ssl = false) {
+	// 	let loginURL = 'http://'+this._config.domain+'/codenjoy-contest/register';
+	// 	if (ssl) {
+	// 		loginURL = 'https://'+this._config.domain+'/codenjoy-contest/register'; 
+	// 	}
+
+	// 	try {
+	// 		let postData = {
+	// 			readableName: ''+this._config.readableName || ''+this._config.username,
+	// 			name: ''+this._config.username,
+	// 			password: ''+this._config.password,
+	// 			game: 'Contest',
+	// 			data: '',
+	// 			gameName: 'snakebattle'
+	// 		};
+	// 		// console.log(postData);
+	// 		let response = await axios.post(loginURL, querystring.stringify(postData), {
+	// 				headers: {
+	// 					'Content-Type': 'application/x-www-form-urlencoded'
+	// 				}
+	// 			});
+
+	// 		let finalURL = response.request.res.responseUrl;
+	// 		let username = finalURL.split('/player/')[1].split('?')[0];
+	// 		let code = finalURL.split('code=')[1];
+
+	// 		this._code = code;
+	// 		this._id = username;
+
+	// 		return true;
+	// 	} catch(e) {
+	// 		console.log(e);
+	// 		// console.log(e.response.status);
+	// 		return false;
+	// 	}
+	// }
+
+	async loginRedirect(ssl = true) {
+		let loginURL = 'http://'+this._config.domain+'/codenjoy-contest/register';
+		if (ssl) {
+			loginURL = 'https://'+this._config.domain+'/codenjoy-contest/register'; 
+		}
+		
+		try {
+			let postData = {
+				readableName: ''+this._config.readableName || ''+this._config.username,
+				name: ''+this._config.username,
+				password: ''+this._config.password,
+				game: 'Contest',
+				data: '',
+				gameName: 'snakebattle'
+			};
+			let response = await axios.post(loginURL, querystring.stringify(postData), {
+					headers: {
+						'Content-Type': 'application/x-www-form-urlencoded'
+					}
+				});
+
+			let finalURL = response.request.res.responseUrl;
+
+			console.log(finalURL);
+
+			let username = finalURL.split('/player/')[1].split('?')[0];
+			let code = finalURL.split('code=')[1];
+
+			this._code = code;
+			this._id = username;
+
+			return true;
+		} catch(e) {
+			// console.log(e);
+			if (e && e.response && e.response.status) {
+				console.log(e.response.status);				
+			}
+			return false;
 		}
 	}
 
@@ -75,7 +193,18 @@ class GameClient extends LovaClass { /// EventEmmiter
 	}
 
 	async initializeSocket() {
-		let wsURL = 'wss://'+this._server+'/codenjoy-contest/ws?user='+this._config.username+'&code='+this._code;
+		// let wsURL = 'ws://'+this._server+'/codenjoy-contest/ws?user='+this._config.username+'&code='+this._code;
+
+		let wsURL = this._websocketPath;
+		wsURL = wsURL.split('%server%').join(this._server);
+		wsURL = wsURL.split('%domain%').join(this._config.domain);
+		wsURL = wsURL.split('%code%').join(this._code);
+		wsURL = wsURL.split('%id%').join(this._id);
+		wsURL = wsURL.split('%username%').join(this._config.username || this._id);
+
+
+		console.log(wsURL);
+
 		this._ws = new WebSocket(wsURL, null, {
 			handshakeTimeout: 1100
 		});
@@ -88,11 +217,13 @@ class GameClient extends LovaClass { /// EventEmmiter
 		this._ws.on('open', ()=>{
 			console.log('connected');
 			this._ws.send('');
+			this.startIdleTimeout();
 
 			this.emit('connected');
 		});
 		this._ws.on('message', (data, flags)=>{
 			console.log('income message');
+			this._mostRecentMessageDate = new Date();
 			try {
 			    let pattern = new RegExp(/^board=(.*)$/);
 			    let message = data;
@@ -147,6 +278,7 @@ class GameClient extends LovaClass { /// EventEmmiter
 
 	async sendCommand(command) {
 		console.log('COMMAND: '+command);
+		console.log('Took '+((new Date).getTime() - this._mostRecentMessageDate.getTime())+'ms to think');
 		if (command) {
 			this._ws.send(command);
 		} else {
